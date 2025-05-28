@@ -4,11 +4,15 @@
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
   <PropertyGroup>
+    <InstallerPlatform>x64</InstallerPlatform>
+  </PropertyGroup>
+  <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Release</Configuration>
+    <SolutionDir Condition=" '$(SolutionDir)' == '' ">..\</SolutionDir>
     <OutputName>EverythingToolbar</OutputName>
   </PropertyGroup>
   <PropertyGroup>
-    <DefineConstants>HarvestPath=..\EverythingToolbar.Launcher\bin\$(Configuration)</DefineConstants>
+    <DefineConstants>HarvestPath=$(SolutionDir)EverythingToolbar.Launcher\bin\$(Platform)\$(Configuration)\net8.0-windows10.0.17763.0</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Product.wxs" />
@@ -18,19 +22,18 @@
     <Content Include="HeatXsl.xslt" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="WixToolset.NetFx.wixext" Version="5.0.1" />
     <PackageReference Include="WixToolset.UI.wixext" Version="5.0.1" />
     <PackageReference Include="WixToolset.Util.wixext" Version="5.0.1" />
     <PackageReference Include="WixToolset.Heat" Version="5.0.1" />
   </ItemGroup>
   <Import Project="Sdk.targets" Sdk="WixToolset.Sdk" Version="5.0.1" />
   <Target Name="BeforeBuild">
-    <HeatDirectory 
-      Directory="..\EverythingToolbar.Launcher\bin\$(Configuration)"
+    <HeatDirectory
+      Directory="$(SolutionDir)EverythingToolbar.Launcher\bin\$(Platform)\$(Configuration)\net8.0-windows10.0.17763.0"
       PreprocessorVariable="var.HarvestPath"
       OutputFile="HeatGeneratedFileList.wxs"
       ComponentGroupName="HeatGenerated"
-      DirectoryRefId="APPLICATIONFOLDER"
+      DirectoryRefId="INSTALLFOLDER"
       AutogenerateGuids="true"
       ToolPath="$(WixToolPath)"
       SuppressFragments="true"
@@ -40,6 +43,6 @@
     />
   </Target>
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
-    <Exec Command="xcopy $(SolutionDir)README.md $(SolutionDir)EverythingToolbar.Launcher\bin\$(Configuration) /r /y&#xA;xcopy $(SolutionDir)LICENSE $(SolutionDir)EverythingToolbar.Launcher\bin\$(Configuration) /r /y" />
+    <Exec Command="xcopy $(SolutionDir)README.md $(OutDir) /r /y&#xA;xcopy $(SolutionDir)LICENSE $(OutDir) /r /y" />
   </Target>
 </Project>

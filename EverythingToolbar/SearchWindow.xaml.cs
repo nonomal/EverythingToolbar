@@ -1,10 +1,12 @@
-﻿using System;
+﻿using EverythingToolbar.Helpers;
+using EverythingToolbar.Search;
+using System;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Interop;
+using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Shell;
-using EverythingToolbar.Helpers;
-using EverythingToolbar.Properties;
 
 namespace EverythingToolbar
 {
@@ -14,17 +16,13 @@ namespace EverythingToolbar
         public event EventHandler<EventArgs> Hiding;
         public event EventHandler<EventArgs> Showing;
 
-        private static readonly int DropShadowBlurRadius = 12;
+        private const int DropShadowBlurRadius = 12;
+
+        private bool _dwmFlushOnRender;
 
         private SearchWindow()
         {
             InitializeComponent();
-
-            if (Settings.Default.isUpgradeRequired)
-            {
-                Settings.Default.Upgrade();
-                Settings.Default.isUpgradeRequired = false;
-            }
 
             if (Utils.GetWindowsVersion() < Utils.WindowsVersion.Windows11)
             {
@@ -39,24 +37,18 @@ namespace EverythingToolbar
                 };
             }
 
+            CompositionTarget.Rendering += OnCompositionTargetRendering;
             EventDispatcher.Instance.GlobalKeyEvent += OnPreviewKeyDown;
-            PreviewKeyDown += OnPreviewKeyDown;
-        }
-
-        private void OnLoaded(object sender, RoutedEventArgs e)
-        {
-            if (EverythingSearch.Instance.Initialize())
-                EverythingSearch.Instance.Reset();
         }
 
         private void OnActivated(object sender, EventArgs e)
         {
             if (TaskbarStateManager.Instance.IsIcon)
-            {
                 EventDispatcher.Instance.InvokeSearchBoxFocused(this, EventArgs.Empty);
-            }
 
             EventDispatcher.Instance.InvokeFocusRequested(this, EventArgs.Empty);
+
+            SetTopmostBelowTaskbar();
         }
 
         private void OnPreviewKeyDown(object sender, KeyEventArgs e)
@@ -64,17 +56,15 @@ namespace EverythingToolbar
             if (e.Key >= Key.D0 && e.Key <= Key.D9 && Keyboard.Modifiers == ModifierKeys.Control)
             {
                 var index = e.Key == Key.D0 ? 9 : e.Key - Key.D1;
-                EverythingSearch.Instance.SelectFilterFromIndex(index);
+                SearchState.Instance.SelectFilterFromIndex(index);
             }
             else if (e.Key == Key.Escape)
             {
-                Instance.Hide();
                 Keyboard.ClearFocus();
+                NativeMethods.FocusTaskbarWindow();
             }
-            else if (e.Key == Key.Tab)
+            else if (Keyboard.Modifiers == ModifierKeys.Alt && e.SystemKey == Key.Space)
             {
-                var offset = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) ? -1 : 1;
-                EverythingSearch.Instance.CycleFilters(offset);
                 e.Handled = true;
             }
         }
@@ -89,7 +79,7 @@ namespace EverythingToolbar
 
         private void OpenSearchInEverything(object sender, RoutedEventArgs e)
         {
-            EverythingSearch.Instance.OpenLastSearchInEverything();
+            SearchResultProvider.OpenSearchInEverything(SearchState.Instance);
         }
 
         public new void Hide()
@@ -102,16 +92,21 @@ namespace EverythingToolbar
 
         private void OnHidden(object sender, EventArgs e)
         {
-            if (Height != Settings.Default.popupSize.Height || Width != Settings.Default.popupSize.Width)
-                Settings.Default.popupSize = new Size(Width, Height);
-            
+            if ((int)Height != ToolbarSettings.User.PopupHeight || (int)Width != ToolbarSettings.User.PopupWidth)
+            {
+                ToolbarSettings.User.PopupHeight = (int)Height;
+                ToolbarSettings.User.PopupWidth = (int)Width;
+            }
+
             // Push outside of screens to prevent flickering when showing
             BeginAnimation(TopProperty, new DoubleAnimation { To = 100000, Duration = TimeSpan.Zero });
             BeginAnimation(LeftProperty, new DoubleAnimation { To = 100000, Duration = TimeSpan.Zero });
 
             base.Hide();
-            
-            EverythingSearch.Instance.Reset();
+
+            _dwmFlushOnRender = false;
+
+            SearchState.Instance.Reset();
         }
 
         public new void Show()
@@ -122,9 +117,7 @@ namespace EverythingToolbar
             ShowActivated = TaskbarStateManager.Instance.IsIcon;
             base.Show();
 
-            // Bring to top and immediately behind taskbar
-            Topmost = true;
-            Topmost = false;
+            SetTopmostBelowTaskbar();
 
             Showing?.Invoke(this, EventArgs.Empty);
         }
@@ -141,7 +134,7 @@ namespace EverythingToolbar
         {
             Width = width;
             Height = height;
-            
+
             var vertical = taskbarEdge == Edge.Left || taskbarEdge == Edge.Right;
             var animation = new DoubleAnimation
             {
@@ -155,7 +148,7 @@ namespace EverythingToolbar
                 else
                     AnimateShowWin10(left, top, width, height, taskbarEdge);
             };
-            
+
             BeginAnimation(vertical ? TopProperty : LeftProperty, animation);
         }
 
@@ -217,7 +210,7 @@ namespace EverythingToolbar
             {
                 From = from,
                 To = to,
-                Duration = Settings.Default.isAnimationsDisabled ? TimeSpan.Zero : TimeSpan.FromSeconds(0.4),
+                Duration = ToolbarSettings.User.IsAnimationsDisabled ? TimeSpan.Zero : TimeSpan.FromSeconds(0.4),
                 EasingFunction = new QuinticEase { EasingMode = EasingMode.EaseOut }
             });
 
@@ -225,7 +218,7 @@ namespace EverythingToolbar
             {
                 From = 0,
                 To = 1,
-                Duration = Settings.Default.isAnimationsDisabled ? TimeSpan.Zero : TimeSpan.FromSeconds(0.4),
+                Duration = ToolbarSettings.User.IsAnimationsDisabled ? TimeSpan.Zero : TimeSpan.FromSeconds(0.4),
                 EasingFunction = new QuinticEase { EasingMode = EasingMode.EaseOut }
             });
 
@@ -249,8 +242,8 @@ namespace EverythingToolbar
             {
                 From = fromThickness,
                 To = new Thickness(0),
-                Duration = Settings.Default.isAnimationsDisabled ? TimeSpan.Zero : TimeSpan.FromSeconds(0.8),
-                EasingFunction = new QuinticEase { EasingMode = EasingMode.EaseOut },
+                Duration = ToolbarSettings.User.IsAnimationsDisabled ? TimeSpan.Zero : TimeSpan.FromSeconds(0.8),
+                EasingFunction = new QuinticEase { EasingMode = EasingMode.EaseOut }
             });
         }
 
@@ -286,8 +279,8 @@ namespace EverythingToolbar
             {
                 From = from,
                 To = to,
-                Duration = Settings.Default.isAnimationsDisabled ? TimeSpan.Zero : TimeSpan.FromSeconds(0.2),
-                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+                Duration = ToolbarSettings.User.IsAnimationsDisabled ? TimeSpan.Zero : TimeSpan.FromSeconds(0.25),
+                EasingFunction = new PowerEase { EasingMode = EasingMode.EaseOut, Power = 5 }
             });
 
             var fromThickness = new Thickness(0);
@@ -310,16 +303,13 @@ namespace EverythingToolbar
             {
                 From = fromThickness,
                 To = new Thickness(0),
-                Duration = Settings.Default.isAnimationsDisabled ? TimeSpan.Zero : TimeSpan.FromSeconds(0.4),
-                EasingFunction = new QuinticEase { EasingMode = EasingMode.EaseOut }
+                Duration = ToolbarSettings.User.IsAnimationsDisabled ? TimeSpan.Zero : TimeSpan.FromSeconds(0.3),
+                EasingFunction = new PowerEase { EasingMode = EasingMode.EaseOut, Power = 5 }
             });
         }
 
         private void AnimateHideWin10(Edge taskbarEdge)
         {
-            Topmost = true;
-            Topmost = false;
-
             BeginAnimation(OpacityProperty, new DoubleAnimation
             {
                 From = 1,
@@ -329,7 +319,7 @@ namespace EverythingToolbar
 
             double target = 0;
             DependencyProperty property = null;
-            switch(taskbarEdge)
+            switch (taskbarEdge)
             {
                 case Edge.Left:
                     target = RestoreBounds.Left - 150;
@@ -359,9 +349,6 @@ namespace EverythingToolbar
 
         private void AnimateHideWin11(Edge taskbarEdge)
         {
-            Topmost = true;
-            Topmost = false;
-
             DependencyProperty property = null;
             double from = 0;
             double to = 0;
@@ -392,42 +379,52 @@ namespace EverythingToolbar
             {
                 From = from,
                 To = to,
-                Duration = Settings.Default.isAnimationsDisabled ? TimeSpan.Zero : TimeSpan.FromSeconds(0.2),
-                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseIn },
+                Duration = ToolbarSettings.User.IsAnimationsDisabled ? TimeSpan.Zero : TimeSpan.FromSeconds(0.25),
+                EasingFunction = new PowerEase { EasingMode = EasingMode.EaseIn, Power = 6 },
             };
             animation.Completed += OnHidden;
             BeginAnimation(property, animation);
-
-            var toThickness = new Thickness(0);
-            switch (taskbarEdge)
-            {
-                case Edge.Top:
-                    toThickness = new Thickness(0, -50, 0, 50);
-                    break;
-                case Edge.Right:
-                    toThickness = new Thickness(50, 0, -50, 0);
-                    break;
-                case Edge.Bottom:
-                    toThickness = new Thickness(0, 50, 0, -50);
-                    break;
-                case Edge.Left:
-                    toThickness = new Thickness(-50, 0, 50, 0);
-                    break;
-            }
-            ContentGrid.BeginAnimation(MarginProperty, new ThicknessAnimation
-            {
-                To = toThickness,
-                Duration = Settings.Default.isAnimationsDisabled ? TimeSpan.Zero : TimeSpan.FromSeconds(0.5),
-                EasingFunction = new QuinticEase { EasingMode = EasingMode.EaseIn }
-            });
         }
 
         public void AnimateHide(Edge taskbarEdge)
         {
+            _dwmFlushOnRender = true;
+
             if (Utils.GetWindowsVersion() >= Utils.WindowsVersion.Windows11)
                 AnimateHideWin11(taskbarEdge);
             else
                 AnimateHideWin10(taskbarEdge);
+        }
+
+        private void OnCompositionTargetRendering(object sender, EventArgs e)
+        {
+            if (_dwmFlushOnRender)
+                NativeMethods.DwmFlush();
+        }
+
+        private void SetTopmostBelowTaskbar()
+        {
+            const int hwndTopmost = -1;
+            const int swpNoactivate = 0x0010;
+            const int swpShowwindow = 0x0040;
+            const int swpNomove = 0x0002;
+            const int swpNosize = 0x0001;
+
+            var hwnd = new WindowInteropHelper(this).Handle;
+            var taskbarHwnd = NativeMethods.FindWindow("Shell_TrayWnd", null);
+
+            if (taskbarHwnd != IntPtr.Zero)
+            {
+                // Set window above other windows but below the taskbar
+                NativeMethods.SetWindowPos(hwnd, taskbarHwnd, 0, 0, 0, 0,
+                    swpNomove | swpNosize | swpNoactivate | swpShowwindow);
+            }
+            else
+            {
+                // Regular topmost
+                NativeMethods.SetWindowPos(hwnd, (IntPtr)hwndTopmost, 0, 0, 0, 0,
+                    swpNomove | swpNosize | swpNoactivate | swpShowwindow);
+            }
         }
     }
 }

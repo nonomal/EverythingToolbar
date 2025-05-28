@@ -165,4 +165,16 @@
   <data name="SetupAssistantFirstStepTitle" xml:space="preserve">
     <value>1. Ikona na pasku zadań</value>
   </data>
+  <data name="SetupAssistantFifthStepText" xml:space="preserve">
+    <value>Poprzez włączenie ikony zasobnika systemowego, możesz w każdej chwili wyłączyć działający w tle EverythingToolbar. Bez tego, zawsze możesz zamknąć EverythingToolbar przy pomocy menedżera zadań.</value>
+  </data>
+  <data name="SetupAssistantFifthStepTitle" xml:space="preserve">
+    <value>5. Konfiguruj ikonę zasobnika systemu</value>
+  </data>
+  <data name="SetupAssistantDisableWarningText" xml:space="preserve">
+    <value>Czy na pewno chcesz opuścić asystenta konfiguracji? EverythingToolbar będzie dostępny tylko przy użyciu skrótu klawiaturowego. Możesz ponownie uzyskać dostęp do asystenta konfiguracji za pomocą ikony w zasobniku systemowym, aby przypiąć ikonę wyszukiwania do paska zadań.</value>
+  </data>
+  <data name="SetupAssistantDisableWarningTitle" xml:space="preserve">
+    <value>Zamknij asystenta konfiguracji</value>
+  </data>
 </root>

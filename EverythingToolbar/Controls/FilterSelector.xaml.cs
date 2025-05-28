@@ -1,74 +1,78 @@
-﻿using System.ComponentModel;
-using System.Windows.Controls;
-using EverythingToolbar.Data;
+﻿using EverythingToolbar.Data;
 using EverythingToolbar.Helpers;
+using System.Windows;
+using System.Windows.Controls;
 
 namespace EverythingToolbar.Controls
 {
     public partial class FilterSelector
     {
+        public static readonly DependencyProperty SelectedFilterProperty =
+            DependencyProperty.Register(
+                nameof(SelectedFilter),
+                typeof(Filter),
+                typeof(FilterSelector),
+                new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, OnSelectedFilterChanged));
+
+        private static void OnSelectedFilterChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            var control = (FilterSelector)d;
+            control.UpdateSelectedItems();
+        }
+
+        public Filter SelectedFilter
+        {
+            get => (Filter)GetValue(SelectedFilterProperty);
+            set => SetValue(SelectedFilterProperty, value);
+        }
+
         public FilterSelector()
         {
             InitializeComponent();
-            DataContext = FilterLoader.Instance;
-            Loaded += (s, e) => {
-                SelectCurrentFilter();
-                EverythingSearch.Instance.PropertyChanged += OnCurrentFilterChanged;
-            };
+
+            Loaded += (s, e) => UpdateSelectedItems();
         }
 
-        public int SelectedDefaultFilterIndex
+        private void UpdateSelectedItems()
         {
-            get => FilterLoader.Instance.DefaultFilters.IndexOf(EverythingSearch.Instance.CurrentFilter);
-        }
+            if (SelectedFilter == null) return;
 
-        public int SelectedUserFilterIndex
-        {
-            get => FilterLoader.Instance.UserFilters.IndexOf(EverythingSearch.Instance.CurrentFilter);
-        }
-        private void SelectCurrentFilter()
-        {
             TabControl.SelectionChanged -= OnTabItemSelected;
-            TabControl.SelectedIndex = SelectedDefaultFilterIndex;
-            TabControl.SelectionChanged += OnTabItemSelected;
-
             ComboBox.SelectionChanged -= OnComboBoxItemSelected;
-            ComboBox.SelectedIndex = SelectedUserFilterIndex;
-            ComboBox.SelectionChanged += OnComboBoxItemSelected;
-        }
 
-        private void OnCurrentFilterChanged(object sender, PropertyChangedEventArgs e)
-        {
-            if (e.PropertyName == "CurrentFilter")
-            {
-                SelectCurrentFilter();
-            }
+            TabControl.SelectedIndex = FilterLoader.Instance.DefaultFilters.IndexOf(SelectedFilter);
+            ComboBox.SelectedIndex = FilterLoader.Instance.UserFilters.IndexOf(SelectedFilter);
+
+            TabControl.SelectionChanged += OnTabItemSelected;
+            ComboBox.SelectionChanged += OnComboBoxItemSelected;
         }
 
         private void OnTabItemSelected(object sender, SelectionChangedEventArgs e)
         {
-            if (TabControl.SelectedIndex < 0)
-                return;
+            if (TabControl.SelectedIndex < 0) return;
 
-            if (!TabControl.IsFocused && !TabControl.IsMouseOver) {
+            if (!TabControl.IsFocused && !TabControl.IsMouseOver)
+            {
                 TabControl.SelectedIndex = -1;
                 return;
             }
 
-            EverythingSearch.Instance.CurrentFilter = TabControl.SelectedItem as Filter;
+            if (TabControl.SelectedItem is Filter selectedFilter)
+                SelectedFilter = selectedFilter;
         }
 
         private void OnComboBoxItemSelected(object sender, SelectionChangedEventArgs e)
         {
-            if (ComboBox.SelectedIndex < 0)
-                return;
+            if (ComboBox.SelectedIndex < 0) return;
 
-            if (!ComboBox.IsFocused && !ComboBox.IsMouseOver) { 
+            if (!ComboBox.IsFocused && !ComboBox.IsMouseOver)
+            {
                 ComboBox.SelectedIndex = -1;
                 return;
             }
 
-            EverythingSearch.Instance.CurrentFilter = ComboBox.SelectedItem as Filter;
+            if (ComboBox.SelectedItem is Filter selectedFilter)
+                SelectedFilter = selectedFilter;
         }
     }
 }

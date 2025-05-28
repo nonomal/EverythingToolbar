@@ -4,13 +4,12 @@ using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Markup;
-using CSDeskBand.Interop;
 
 namespace EverythingToolbar.Deskband.Converters
 {
     public class SearchControlVisibilityConverter : MarkupExtension, IValueConverter
     {
-        public bool AlwaysVisibleWithAutoHidingTaskbar  { get; set; }
+        public bool AlwaysVisibleWithAutoHidingTaskbar { get; set; }
         public double VisibilityThreshold { get; set; }
 
         private static bool _isTaskbarAutoHiding;

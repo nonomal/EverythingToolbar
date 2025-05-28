@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using EverythingToolbar.Data;
+using EverythingToolbar.Helpers;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
@@ -7,9 +9,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Xml;
 using System.Xml.Serialization;
-using EverythingToolbar.Data;
-using EverythingToolbar.Helpers;
-using EverythingToolbar.Properties;
 
 namespace EverythingToolbar
 {
@@ -24,7 +23,7 @@ namespace EverythingToolbar
 
             _rules = LoadRules();
             dataGrid.ItemsSource = _rules;
-            autoApplyRulesCheckbox.IsChecked = Settings.Default.isAutoApplyRules;
+            autoApplyRulesCheckbox.IsChecked = ToolbarSettings.User.IsAutoApplyRules;
             UpdateUI();
         }
 
@@ -35,9 +34,9 @@ namespace EverythingToolbar
 
         private void Save(object sender, RoutedEventArgs e)
         {
-            if(SaveRules(_rules, (bool)autoApplyRulesCheckbox.IsChecked))
+            if (SaveRules(_rules, (bool)autoApplyRulesCheckbox.IsChecked))
             {
-                Settings.Default.isAutoApplyRules = (bool)autoApplyRulesCheckbox.IsChecked;
+                ToolbarSettings.User.IsAutoApplyRules = (bool)autoApplyRulesCheckbox.IsChecked;
                 Close();
             }
         }
@@ -161,12 +160,12 @@ namespace EverythingToolbar
             UpdateUI();
         }
 
-        public static bool HandleRule(SearchResult searchResult, string command="")
+        public static bool HandleRule(SearchResult searchResult, string command = "")
         {
             if (searchResult == null)
                 return false;
 
-            if (Settings.Default.isAutoApplyRules && string.IsNullOrEmpty(command))
+            if (ToolbarSettings.User.IsAutoApplyRules && string.IsNullOrEmpty(command))
             {
                 foreach (var r in LoadRules())
                 {
@@ -189,7 +188,7 @@ namespace EverythingToolbar
                     ShellUtils.CreateProcessFromCommandLine(command, searchResult.Path);
                     return true;
                 }
-                catch(Win32Exception)
+                catch (Win32Exception)
                 {
                     MessageBox.Show(Properties.Resources.MessageBoxFailedToRunCommand + " " + command);
                 }

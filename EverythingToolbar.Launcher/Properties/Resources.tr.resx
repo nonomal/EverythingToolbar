@@ -148,10 +148,10 @@
     <value>İsteğe bağlı olarak Windows arama simgesi gizlenilebilir.</value>
   </data>
   <data name="SetupAssistantThirdStepTitle" xml:space="preserve">
-    <value>3. Windows aramayı gizle</value>
+    <value>3. Windows arama'yı gizle</value>
   </data>
   <data name="SetupAssistantFourthStepText" xml:space="preserve">
-    <value>EverythingToolbar'ın sistem ile otomatik olarak başlatılması önerilir.</value>
+    <value>EverythingToolbar'ın sistem başlangıcında otomatik olarak başlatılması önerilir.</value>
   </data>
   <data name="SetupAssistantFourthStepTitle" xml:space="preserve">
     <value>4. Otomatik başlatmayı ayarla</value>
@@ -164,5 +164,17 @@
   </data>
   <data name="SetupAssistantFirstStepTitle" xml:space="preserve">
     <value>1. Görev çubuğu simgesi</value>
+  </data>
+  <data name="SetupAssistantFifthStepText" xml:space="preserve">
+    <value>Bildirim alanı simgesini etkinleştirerek, EverythingToolbar arka plan işlemini istediğiniz zaman sonlandırabilirsiniz. Bu olmadan da, EverythingToolbar her zaman görev yöneticisinden sonlandırılabilir.</value>
+  </data>
+  <data name="SetupAssistantFifthStepTitle" xml:space="preserve">
+    <value>5. Sistem tepsisi simgesini ayarla</value>
+  </data>
+  <data name="SetupAssistantDisableWarningText" xml:space="preserve">
+    <value>Kurulum asistanından çıkmak istediğinizden emin misiniz? EverythingToolbar yalnızca klavye kısayolu kullanılarak erişilebilir olacaktır. Arama simgesini görev çubuğuna sabitlemek isterseniz; bildirim alanı simgesinden kurulum asistanına tekrar erişebilirsiniz.</value>
+  </data>
+  <data name="SetupAssistantDisableWarningTitle" xml:space="preserve">
+    <value>Kurulum Yardımcısından Çık</value>
   </data>
 </root>

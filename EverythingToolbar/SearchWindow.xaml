@@ -8,24 +8,23 @@
         xmlns:c="clr-namespace:EverythingToolbar.Converters"
         xmlns:h="clr-namespace:EverythingToolbar.Helpers"
         xmlns:local="clr-namespace:EverythingToolbar"
+        xmlns:search="clr-namespace:EverythingToolbar.Search"
         xmlns:controls="clr-namespace:EverythingToolbar.Controls"
-        xmlns:properties="clr-namespace:EverythingToolbar.Properties"
         WindowStyle="None"
         MinWidth="600"
         MinHeight="300"
         Background="Transparent"
         ShowInTaskbar="False"
+        UseLayoutRounding="True"
+        PreviewKeyDown="OnPreviewKeyDown"
         Activated="OnActivated"
         LostKeyboardFocus="OnLostKeyboardFocus"
-        Loaded="OnLoaded"
-        UseLayoutRounding="True"
-        DataContext="{Binding Source={x:Static local:EverythingSearch.Instance}}"
         mc:Ignorable="d"
         d:DesignWidth="500"
         d:DesignHeight="500">
 
     <i:Interaction.Behaviors>
-        <b:DpiScaling />
+        <b:FlowDirectionAwareness />
         <b:MicaWindow MicaWindowStyle="TransientWindow" CaptionHeight="0" />
         <b:ThemeAwareness />
     </i:Interaction.Behaviors>
@@ -60,16 +59,15 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
 
-                    <controls:FilterSelector />
+                    <controls:FilterSelector x:Name="FilterSelector" 
+                                             SelectedFilter="{Binding Source={x:Static search:SearchState.Instance}, Path=Filter, Mode=TwoWay}"/>
 
-                    <Border Visibility="{Binding TotalResultsNumber,
-                                                 Converter={c:NullToVisibilityConverter}}"
-                            Grid.Column="1">
+                    <Border Grid.Column="1">
                         <Button Style="{DynamicResource TabBarButtonStyle}"
-                                Content="{Binding TotalResultsNumber, 
+                                Content="{Binding ElementName=SearchResultsView, Path=TotalResultsCount, 
                                                   Converter={c:SearchResultsCountConverter}}"
-                                Visibility="{Binding Source={x:Static properties:Settings.Default},
-                                                     Path=isShowResultsCount,
+                                Visibility="{Binding Source={x:Static local:ToolbarSettings.User},
+                                                     Path=IsShowResultsCount,
                                                      Converter={c:BoolToVisibilityConverter}}"
                                 Click="OpenSearchInEverything" />
                     </Border>
@@ -83,6 +81,7 @@
                                             Grid.Row="{DynamicResource SearchResultsViewGridRow}" />
 
                 <controls:SearchBox x:Name="SearchBox"
+                                    SearchTerm="{Binding Source={x:Static search:SearchState.Instance}, Path=SearchTerm, Mode=TwoWay}"
                                     TabIndex="999"
                                     Grid.Row="{DynamicResource SearchBoxGridRow}"
                                     Height="40"

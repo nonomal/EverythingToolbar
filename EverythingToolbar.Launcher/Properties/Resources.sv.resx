@@ -165,4 +165,16 @@
   <data name="SetupAssistantFirstStepTitle" xml:space="preserve">
     <value>1. Aktivitetsfältsikonen</value>
   </data>
+  <data name="SetupAssistantFifthStepText" xml:space="preserve">
+    <value>Genom att aktivera ikonen för systemfältet kan du avsluta EverythingToolbar bakgrundsprocess när som helst. Utan den kan EverythingToolbar alltid avslutas via uppgiftshanteraren.</value>
+  </data>
+  <data name="SetupAssistantFifthStepTitle" xml:space="preserve">
+    <value>5. Konfigurera systemfältsikonen</value>
+  </data>
+  <data name="SetupAssistantDisableWarningText" xml:space="preserve">
+    <value>Är du säker på att du vill avsluta installationsassistenten? EverythingToolbar kommer endast att vara tillgänglig med hjälp av kortkommandot. Du kan komma åt installationsassistenten igen via systemfältsikonen för att fästa sökikonen i aktivitetsfältet.</value>
+  </data>
+  <data name="SetupAssistantDisableWarningTitle" xml:space="preserve">
+    <value>Avsluta installationsassistenten</value>
+  </data>
 </root>

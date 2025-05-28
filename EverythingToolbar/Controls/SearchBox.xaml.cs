@@ -1,37 +1,62 @@
-﻿using System;
+﻿using EverythingToolbar.Helpers;
+using EverythingToolbar.Search;
+using System;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
-using EverythingToolbar.Helpers;
-using EverythingToolbar.Properties;
 
 namespace EverythingToolbar.Controls
 {
-    public partial class SearchBox : UserControl
+    public partial class SearchBox
     {
-        public event EventHandler<TextChangedEventArgs> TextChanged;
+        public static readonly DependencyProperty SearchTermProperty = DependencyProperty.Register(
+            nameof(SearchTerm),
+            typeof(string),
+            typeof(SearchBox),
+            new FrameworkPropertyMetadata(string.Empty, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, OnSearchTermPropertyChanged));
 
-        private int LastCaretIndex;
+        public string SearchTerm
+        {
+            get => (string)GetValue(SearchTermProperty);
+            set => SetValue(SearchTermProperty, value);
+        }
+
+        private static void OnSearchTermPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            if (d is SearchBox searchBox && e.NewValue is string newValue)
+            {
+                if (searchBox.TextBox.Text == newValue)
+                    return;
+
+                searchBox.TextBox.Text = newValue;
+                searchBox.TextBox.CaretIndex = searchBox.TextBox.Text.Length;
+            }
+        }
+
+        private bool _isInternalTextChange;
 
         public SearchBox()
         {
             InitializeComponent();
 
-            DataContext = EverythingSearch.Instance;
             InputMethod.SetPreferredImeState(this, InputMethodState.DoNotCare);
 
-            // IsEnabled property of matchWholeWord button needs to be handled
-            // in code because DataTriggers are not compatible with DynamicResources as MenuItem styles
-            Settings.Default.PropertyChanged += OnSettingsChanged;
-            EverythingSearch.Instance.PropertyChanged += OnSettingsChanged;
-
+            ToolbarSettings.User.PropertyChanged += OnSettingsChanged;
             EventDispatcher.Instance.SearchTermReplaced += (s, searchTerm) => { UpdateSearchTerm(searchTerm); };
             EventDispatcher.Instance.SearchBoxFocusRequested += OnFocusRequested;
+        }
 
-            // Forward TextBox.TextChanged to SearchBox.TextChanged
-            TextBox.TextChanged += (s, e) => TextChanged?.Invoke(s, e);
+        private void OnTextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (_isInternalTextChange)
+                return;
+
+            if (ToolbarSettings.User.IsSearchAsYouType)
+            {
+                SearchTerm = TextBox.Text;
+            }
         }
 
         private void OnFocusRequested(object sender, EventArgs e)
@@ -53,26 +78,54 @@ namespace EverythingToolbar.Controls
                 UpdateSearchTerm(HistoryManager.Instance.GetNextItem());
                 e.Handled = true;
             }
-            else if ((e.Key == Key.Home || e.Key == Key.End) && Keyboard.Modifiers != ModifierKeys.Shift && Settings.Default.isAutoSelectFirstResult ||
+            else if (Keyboard.Modifiers == ModifierKeys.None && e.Key == Key.Enter && !ToolbarSettings.User.IsSearchAsYouType)
+            {
+                SearchTerm = TextBox.Text;
+                e.Handled = true;
+            }
+            else if ((e.Key == Key.Home || e.Key == Key.End) && Keyboard.Modifiers != ModifierKeys.Shift && ToolbarSettings.User.IsAutoSelectFirstResult ||
                 e.Key == Key.PageDown || e.Key == Key.PageUp ||
                 e.Key == Key.Up || e.Key == Key.Down ||
                 e.Key == Key.Escape || e.Key == Key.Enter ||
-                (e.Key >= Key.D0 && e.Key <= Key.D9 && Keyboard.Modifiers == ModifierKeys.Control))
+                (((e.Key >= Key.D0 && e.Key <= Key.D9) ||
+                  e.Key == Key.I ||
+                  e.Key == Key.B ||
+                  e.Key == Key.U ||
+                  e.Key == Key.R
+                 ) && Keyboard.Modifiers == ModifierKeys.Control))
             {
                 EventDispatcher.Instance.InvokeGlobalKeyEvent(this, e);
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Tab)
+            {
+                // The down stroke of the Tab key is not always consistent. Therefore it's handled by the up stroke event.
+                e.Handled = true;
+            }
+        }
+
+        private void OnPreviewKeyUp(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Tab)
+            {
+                var offset = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) ? -1 : 1;
+                SearchState.Instance.CycleFilters(offset);
                 e.Handled = true;
             }
         }
 
         private void UpdateSearchTerm(string newSearchTerm)
         {
+            _isInternalTextChange = true;
             TextBox.Text = newSearchTerm;
             TextBox.CaretIndex = TextBox.Text.Length;
+            SearchTerm = newSearchTerm;
+            _isInternalTextChange = false;
         }
 
         private void OnSettingsChanged(object sender, PropertyChangedEventArgs e)
         {
-            if (e.PropertyName == "isShowQuickToggles")
+            if (e.PropertyName == nameof(ToolbarSettings.User.IsShowQuickToggles))
                 UpdateQuickTogglesVisibility();
         }
 
@@ -83,7 +136,7 @@ namespace EverythingToolbar.Controls
 
         private void UpdateQuickTogglesVisibility()
         {
-            if (Settings.Default.isShowQuickToggles && ActualWidth > 200)
+            if (ToolbarSettings.User.IsShowQuickToggles && ActualWidth > 200)
             {
                 QuickToggleButtons.Visibility = Visibility.Visible;
                 TextBox.Padding = new Thickness(37, 0, 130, 0);
@@ -97,14 +150,13 @@ namespace EverythingToolbar.Controls
 
         public new void Focus()
         {
-            NativeMethods.SetForegroundWindow(((HwndSource)PresentationSource.FromVisual(this)).Handle);
+            if (PresentationSource.FromVisual(TextBox) is HwndSource hwnd)
+            {
+                NativeMethods.ForciblySetForegroundWindow(hwnd.Handle);
+            }
+
             TextBox.Focus();
             Keyboard.Focus(TextBox);
-        }
-
-        public void RestoreCaretIndex()
-        {
-            TextBox.CaretIndex = Math.Min(LastCaretIndex, TextBox.Text.Length);
         }
 
         private void OnGotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
@@ -114,8 +166,6 @@ namespace EverythingToolbar.Controls
 
         private void OnLostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
         {
-            LastCaretIndex = TextBox.CaretIndex;
-
             if (e.NewFocus == null)  // New focus outside application
             {
                 SearchWindow.Instance.Hide();
@@ -124,14 +174,10 @@ namespace EverythingToolbar.Controls
 
         private void SelectivelyIgnoreMouseButton(object sender, MouseButtonEventArgs e)
         {
-            var textBox = (sender as TextBox);
-            if (textBox != null)
+            if (sender is TextBox textBox && !textBox.IsKeyboardFocusWithin)
             {
-                if (!textBox.IsKeyboardFocusWithin)
-                {
-                    e.Handled = true;
-                    textBox.Focus();
-                }
+                e.Handled = true;
+                textBox.Focus();
             }
         }
 

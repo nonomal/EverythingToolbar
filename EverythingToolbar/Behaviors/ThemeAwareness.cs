@@ -1,14 +1,13 @@
-﻿using System;
+﻿using EverythingToolbar.Helpers;
+using Microsoft.Xaml.Behaviors;
+using NLog;
+using System;
 using System.ComponentModel;
 using System.IO;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Media;
 using Windows.UI.ViewManagement;
-using EverythingToolbar.Helpers;
-using EverythingToolbar.Properties;
-using Microsoft.Xaml.Behaviors;
-using NLog;
 using Color = Windows.UI.Color;
 
 namespace EverythingToolbar.Behaviors
@@ -60,8 +59,10 @@ namespace EverythingToolbar.Behaviors
             var systemThemeWatcher = new RegistryWatcher(SystemThemeRegistryEntry);
             systemThemeWatcher.OnChangeValue += newValue =>
             {
-                Dispatcher.Invoke(() => {
-                    ApplyTheme((int)newValue == 1);
+                Dispatcher.Invoke(() =>
+                {
+                    var theme = GetThemeFromRegistryValue((int)newValue);
+                    ApplyTheme(theme);
                 });
             };
 
@@ -78,24 +79,40 @@ namespace EverythingToolbar.Behaviors
                 Logger.Info("Could not apply accent color automatically.");
             }
 
-            Settings.Default.PropertyChanged += OnSettingsChanged;
+            ToolbarSettings.User.PropertyChanged += OnSettingsChanged;
         }
 
         private void OnSettingsChanged(object sender, PropertyChangedEventArgs e)
         {
-            if (e.PropertyName == "itemTemplate")
+            if (e.PropertyName == nameof(ToolbarSettings.User.ItemTemplate))
             {
                 AutoApplyTheme();
             }
         }
 
-        private void AutoApplyTheme()
+        private Theme GetThemeFromRegistryValue(int registryValue)
         {
-            var isLightTheme = (int)SystemThemeRegistryEntry.GetValue(0) == 1;
-            ApplyTheme(isLightTheme);
+            if (ToolbarSettings.User.ThemeOverride.ToLower() == "light")
+            {
+                return Theme.Light;
+            }
+
+            if (ToolbarSettings.User.ThemeOverride.ToLower() == "dark")
+            {
+                return Theme.Dark;
+            }
+
+            return registryValue == 1 ? Theme.Light : Theme.Dark;
         }
 
-        private void ApplyTheme(bool isLightTheme)
+        private void AutoApplyTheme()
+        {
+            var themeValue = (int)SystemThemeRegistryEntry.GetValue(0);
+            var theme = GetThemeFromRegistryValue(themeValue);
+            ApplyTheme(theme);
+        }
+
+        private void ApplyTheme(Theme theme)
         {
             _currentResources.Clear();
 
@@ -113,17 +130,17 @@ namespace EverythingToolbar.Behaviors
                 AddResource(file.FullName);
 
             // Apply color scheme according to Windows theme
-            var themeFileName = isLightTheme ? "Light.xaml" : "Dark.xaml";
+            var themeFileName = theme == Theme.Light ? "Light.xaml" : "Dark.xaml";
             AddResource(Path.Combine(themeLocation, themeFileName));
 
             // Apply ItemTemplate style
-            var dataTemplateLocation = Path.Combine(assemblyLocation, "ItemTemplates", Settings.Default.itemTemplate + ".xaml");
+            var dataTemplateLocation = Path.Combine(assemblyLocation, "ItemTemplates", ToolbarSettings.User.ItemTemplate + ".xaml");
             AddResource(dataTemplateLocation, fallbackPath: Path.Combine(assemblyLocation, "ItemTemplates", "Normal.xaml"));
 
             // Apply accent color
             if (_settings != null)
             {
-                if (isLightTheme)
+                if (theme == Theme.Light)
                     SetAccentColor(GetBrush(_settings.GetColorValue(UIColorType.AccentDark1)));
                 else
                     SetAccentColor(GetBrush(_settings.GetColorValue(UIColorType.AccentLight2)));
@@ -137,7 +154,7 @@ namespace EverythingToolbar.Behaviors
             ResourceChanged?.Invoke(this, new ResourcesChangedEventArgs
             {
                 NewResource = _currentResources,
-                NewTheme = isLightTheme ? Theme.Light : Theme.Dark
+                NewTheme = theme
             });
         }
 

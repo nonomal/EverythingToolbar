@@ -14,7 +14,7 @@
         ResizeMode="NoResize">
     
     <i:Interaction.Behaviors>
-        <b:DpiScaling />
+        <b:FlowDirectionAwareness />
     </i:Interaction.Behaviors>
 
     <Grid Margin="10">

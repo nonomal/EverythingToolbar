@@ -130,19 +130,19 @@
     <value>離開</value>
   </data>
   <data name="ContextMenuRunSetupAssistant" xml:space="preserve">
-    <value>執行設定助理...</value>
+    <value>執行設置助手……</value>
   </data>
   <data name="SetupAssistantSecondStepText" xml:space="preserve">
-    <value>將 EverythingToobar 釘選至工作列，右鍵點選圖示並選取「釘選到工作列」。</value>
+    <value>要將 EverythingToobar 釘選至工作列，請在圖示上點擊右鍵並選擇「釘選到工作列」。</value>
   </data>
   <data name="SetupAssistantSecondStepTitle" xml:space="preserve">
     <value>2. 釘選到工作列</value>
   </data>
   <data name="SetupAssistantRestartExplorerDialogText" xml:space="preserve">
-    <value>更新工作列圖示需要重新啟動檔案總管，您想要立即重新啟動嗎？</value>
+    <value>更新工作列圖示需要重啟檔案總管，您想要立即重新啟動嗎？</value>
   </data>
   <data name="SetupAssistantRestartExplorerDialogTitle" xml:space="preserve">
-    <value>重新啟動檔案總管</value>
+    <value>重啟檔案總管</value>
   </data>
   <data name="SetupAssistantThirdStepText" xml:space="preserve">
     <value>另外，原本的 Windows 搜尋圖示可以被隱藏。</value>
@@ -157,12 +157,24 @@
     <value>4. 設定啟動時自動執行</value>
   </data>
   <data name="SetupAssistantTitle" xml:space="preserve">
-    <value>EverythingToolbar 設定助手</value>
+    <value>EverythingToolbar 設置助手</value>
   </data>
   <data name="SetupAssistantFirstStepText" xml:space="preserve">
     <value>從下列項目選擇一個工作列圖示：</value>
   </data>
   <data name="SetupAssistantFirstStepTitle" xml:space="preserve">
     <value>1. 工作列圖示</value>
+  </data>
+  <data name="SetupAssistantFifthStepText" xml:space="preserve">
+    <value>啟用系統匣圖示後，您可以隨時結束 EverythingToolbar 背景進程。若未啟用，您仍可以透過任務管理員結束 EverythingToolbar。</value>
+  </data>
+  <data name="SetupAssistantFifthStepTitle" xml:space="preserve">
+    <value>設定系統匣圖示</value>
+  </data>
+  <data name="SetupAssistantDisableWarningText" xml:space="preserve">
+    <value>您確定要退出設置助手嗎？退出後，EverythingToolbar 只能通過鍵盤快捷鍵訪問。您可以通過系統匣圖示再次進入設置助手，將搜尋圖示固定到任務欄。</value>
+  </data>
+  <data name="SetupAssistantDisableWarningTitle" xml:space="preserve">
+    <value>執行設置助手</value>
   </data>
 </root>

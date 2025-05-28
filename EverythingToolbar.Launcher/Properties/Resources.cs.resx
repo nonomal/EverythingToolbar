@@ -165,4 +165,16 @@
   <data name="SetupAssistantFirstStepTitle" xml:space="preserve">
     <value>1. Ikona na hlavním panelu</value>
   </data>
+  <data name="SetupAssistantFifthStepText" xml:space="preserve">
+    <value>Povolením ikony systémové lišty, můžete ukončit EverythingToolbar kdykoliv. Bez ikony může být ukončen přes správce úloh.</value>
+  </data>
+  <data name="SetupAssistantFifthStepTitle" xml:space="preserve">
+    <value>5. Nastavit ikonu systémové lišty</value>
+  </data>
+  <data name="SetupAssistantDisableWarningText" xml:space="preserve">
+    <value>Jste si jisti, že chcete ukončit asistenta pro nastavení? EverythingToolbar bude přístupný pouze pomocí klávesové zkratky. Můžete znovu spustit asistenta pro nastavení přes ikonu systémové lišty pro připnutí vyhledávací ikony na hlavní lištu.</value>
+  </data>
+  <data name="SetupAssistantDisableWarningTitle" xml:space="preserve">
+    <value>Ukončit asistenta nastavení</value>
+  </data>
 </root>

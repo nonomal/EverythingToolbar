@@ -1,26 +1,30 @@
-﻿using System;
+﻿using EverythingToolbar.Helpers;
+using EverythingToolbar.Properties;
+using EverythingToolbar.Search;
+using NLog;
+using Peter;
+using System;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
+using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Forms;
 using System.Windows.Media;
-using EverythingToolbar.Helpers;
-using EverythingToolbar.Properties;
-using NLog;
-using Peter;
-using FILETIME = System.Runtime.InteropServices.ComTypes.FILETIME;
 using Clipboard = System.Windows.Clipboard;
 using DataObject = System.Windows.DataObject;
+using FILETIME = System.Runtime.InteropServices.ComTypes.FILETIME;
 using MessageBox = System.Windows.MessageBox;
 
 namespace EverythingToolbar.Data
 {
-    public class SearchResult
+    public class SearchResult : INotifyPropertyChanged
     {
         private static readonly ILogger Logger = ToolbarLogger.GetLogger<SearchResult>();
 
@@ -55,35 +59,72 @@ namespace EverythingToolbar.Data
         {
             get
             {
-                var dateModified = ((long)DateModified.dwHighDateTime << 32) | (uint)DateModified.dwLowDateTime;
+                long dateModified = ((long)DateModified.dwHighDateTime << 32) | (uint)DateModified.dwLowDateTime;
                 return DateTime.FromFileTime(dateModified).ToString("g");
             }
         }
 
-        public ImageSource Icon => WindowsThumbnailProvider.GetThumbnail(FullPathAndFileName, 16, 16);
+        private ImageSource _icon;
+        public ImageSource Icon
+        {
+            get
+            {
+                if (_icon != null)
+                    return _icon;
+
+                string[] imageExtensions =
+                {
+                    ".png",
+                    ".jpg",
+                    ".jpeg",
+                    ".gif",
+                    ".bmp",
+                    ".tiff",
+                    ".ico"
+                };
+                string ext = System.IO.Path.GetExtension(FullPathAndFileName).ToLowerInvariant();
+                if (ToolbarSettings.User.IsThumbnailsEnabled && imageExtensions.Contains(ext) && File.Exists(FullPathAndFileName))
+                {
+                    _icon = IconProvider.GetImage(FullPathAndFileName);
+                    Task.Run(() =>
+                    {
+                        Icon = ThumbnailProvider.GetImage(FullPathAndFileName);
+                    });
+                }
+                else
+                {
+                    _icon = IconProvider.GetImage(FullPathAndFileName, source =>
+                    {
+                        Icon = source;
+                    });
+                }
+
+                return _icon;
+            }
+            set
+            {
+                _icon = value;
+                OnPropertyChanged();
+            }
+        }
 
         public void Open()
         {
             try
             {
-                if (Directory.Exists(FullPathAndFileName) && ShellUtils.WindowsExplorerIsDefault())
+                var path = FullPathAndFileName;
+                if (Directory.Exists(FullPathAndFileName))
                 {
-                    // We need to open directories with explorer specifically. Otherwise executables with the same stem
+                    // We need to make sure directories end with a slash. Otherwise executables with the same stem
                     // might be executed instead due to how Process.Start prioritizes executables when resolving filenames.
-                    Process.Start(new ProcessStartInfo
-                    {
-                        FileName = "explorer.exe",
-                        Arguments = FullPathAndFileName
-                    });
+                    path += "\\";
                 }
-                else
+                Process.Start(new ProcessStartInfo(path)
                 {
-                    Process.Start(new ProcessStartInfo(FullPathAndFileName)
-                    {
-                        WorkingDirectory = Path
-                    });
-                }
-                EverythingSearch.IncrementRunCount(FullPathAndFileName);
+                    WorkingDirectory = Path,
+                    UseShellExecute = true
+                });
+                SearchResultProvider.IncrementRunCount(FullPathAndFileName);
             }
             catch (Exception e)
             {
@@ -98,9 +139,10 @@ namespace EverythingToolbar.Data
             {
                 Process.Start(new ProcessStartInfo(FullPathAndFileName)
                 {
-                    Verb = "runas"
+                    Verb = "runas",
+                    UseShellExecute = true
                 });
-                EverythingSearch.IncrementRunCount(FullPathAndFileName);
+                SearchResultProvider.IncrementRunCount(FullPathAndFileName);
             }
             catch (Exception e)
             {
@@ -114,7 +156,7 @@ namespace EverythingToolbar.Data
             try
             {
                 ShellUtils.OpenParentFolderAndSelect(FullPathAndFileName);
-                EverythingSearch.IncrementRunCount(FullPathAndFileName);
+                SearchResultProvider.IncrementRunCount(FullPathAndFileName);
             }
             catch (Exception e)
             {
@@ -181,7 +223,7 @@ namespace EverythingToolbar.Data
 
         public void ShowInEverything()
         {
-            EverythingSearch.Instance.OpenLastSearchInEverything(FullPathAndFileName);
+            SearchResultProvider.OpenSearchInEverything(SearchState.Instance, filenameToHighlight: FullPathAndFileName);
         }
 
         public void PreviewInQuickLook()
@@ -223,7 +265,7 @@ namespace EverythingToolbar.Data
                     const int SEER_INVOKE_W32 = 5000;
                     const int WM_COPYDATA = 0x004A;
 
-                    var cd = new NativeMethods.COPYDATASTRUCT
+                    var cd = new NativeMethods.Copydatastruct
                     {
                         cbData = (FullPathAndFileName.Length + 1) * 2,
                         lpData = Marshal.StringToHGlobalUni(FullPathAndFileName),
@@ -239,6 +281,13 @@ namespace EverythingToolbar.Data
                     Logger.Error(e, "Failed to open Seer preview.");
                 }
             });
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        private void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
     }
 }
